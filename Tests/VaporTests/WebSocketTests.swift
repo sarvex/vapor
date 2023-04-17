@@ -158,33 +158,33 @@ final class WebSocketTests: XCTestCase {
             }
 
             func track(_ ws: WebSocket) {
-                self.lock.lock()
-                defer { self.lock.unlock() }
-                self.connections.insert(ws)
-                ws.onClose.whenComplete { _ in
-                    self.lock.lock()
-                    defer { self.lock.unlock() }
-                    self.connections.remove(ws)
+                self.lock.withLockVoid {
+                    self.connections.insert(ws)
+                    ws.onClose.whenComplete { _ in
+                        self.lock.withLockVoid {
+                            self.connections.remove(ws)
+                        }
+                    }
                 }
             }
 
             func broadcast(_ message: String) {
-                self.lock.lock()
-                defer { self.lock.unlock() }
-                for ws in self.connections {
-                    ws.send(message)
+                self.lock.withLockVoid {
+                    for ws in self.connections {
+                        ws.send(message)
+                    }
                 }
             }
 
             /// Closes all active WebSocket connections
             func shutdown(_ app: Application) {
-                self.lock.lock()
-                defer { self.lock.unlock() }
-                app.logger.debug("Shutting down \(self.connections.count) WebSocket(s)")
-                try! EventLoopFuture<Void>.andAllSucceed(
-                    self.connections.map { $0.close() } ,
-                    on: app.eventLoopGroup.next()
-                ).wait()
+                self.lock.withLockVoid {
+                    app.logger.debug("Shutting down \(self.connections.count) WebSocket(s)")
+                    try! EventLoopFuture<Void>.andAllSucceed(
+                        self.connections.map { $0.close() } ,
+                        on: app.eventLoopGroup.next()
+                    ).wait()
+                }
             }
         }
 
