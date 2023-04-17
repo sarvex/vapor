@@ -148,7 +148,7 @@ final class WebSocketTests: XCTestCase {
         let app = Application(.testing)
         app.http.server.configuration.port = 1337
 
-        final class WebSocketManager: LifecycleHandler {
+        final class WebSocketManager: LifecycleHandler, @unchecked Sendable {
             private let lock: NIOLock
             private var connections: Set<WebSocket>
 
